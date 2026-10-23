@@ -116,3 +116,170 @@ cliente. Por eso el modelo puede trabajar con solo tres números por cliente.
 - **¿Por qué un cliente con $x = 0$ no puede estar muerto?** Porque en el BG/NBD la
   muerte solo ocurre después de una compra repetida. Esta decisión es justo la que
   cambia el MBG/NBD (inciso 4.6).
+
+  ---
+
+## 1.2 Mezcla sobre λ y p
+
+### Planteamiento
+
+Ahora $\lambda$ y $p$ no son conocidas: varían entre clientes según
+
+$$
+f(\lambda \mid r, \alpha) = \frac{\alpha^r \lambda^{r-1} e^{-\alpha\lambda}}{\Gamma(r)}, \quad \lambda > 0
+\qquad \text{(supuesto ii: Gamma con forma } r \text{ y tasa } \alpha\text{)}
+$$
+
+$$
+f(p \mid a, b) = \frac{p^{a-1}(1-p)^{b-1}}{B(a,b)}, \quad 0 < p < 1
+\qquad \text{(supuesto iv: Beta}(a, b)\text{)}
+$$
+
+La verosimilitud de un cliente en función de los parámetros poblacionales es el
+promedio de la verosimilitud de 1.1 sobre todos los valores posibles de $\lambda$ y $p$.
+Por el supuesto (v), $\lambda$ y $p$ son independientes, así que su densidad conjunta
+es el producto $f(\lambda \mid r, \alpha) \, f(p \mid a, b)$:
+
+$$
+L(r, \alpha, a, b \mid x, t_x, T) = \int_0^1 \!\! \int_0^\infty L(\lambda, p \mid x, t_x, T) \, f(\lambda \mid r, \alpha) \, f(p \mid a, b) \, d\lambda \, dp
+$$
+
+### La integral se separa
+
+Cada término de $L(\lambda, p \mid x, t_x, T)$ es el producto de una función de $p$ por
+una función de $\lambda$:
+
+$$
+L(\lambda, p \mid x, t_x, T) = \underbrace{(1-p)^x}_{\text{solo } p} \cdot \underbrace{\lambda^x e^{-\lambda T}}_{\text{solo } \lambda}
++ \delta_{x>0} \underbrace{p(1-p)^{x-1}}_{\text{solo } p} \cdot \underbrace{\lambda^x e^{-\lambda t_x}}_{\text{solo } \lambda}
+$$
+
+Gracias a la independencia, cada integral doble es el producto de dos integrales simples:
+
+$$
+L(r, \alpha, a, b \mid x, t_x, T) =
+\underbrace{\int_0^1 (1-p)^x f(p) \, dp}_{(\text{p1})} \cdot \underbrace{\int_0^\infty \lambda^x e^{-\lambda T} f(\lambda) \, d\lambda}_{(\lambda\text{ con } t = T)}
++ \delta_{x>0}
+\underbrace{\int_0^1 p(1-p)^{x-1} f(p) \, dp}_{(\text{p2})} \cdot \underbrace{\int_0^\infty \lambda^x e^{-\lambda t_x} f(\lambda) \, d\lambda}_{(\lambda\text{ con } t = t_x)}
+$$
+
+Solo hay que resolver una integral en $\lambda$ (para un $t$ genérico) y dos en $p$.
+
+### Integral sobre $\lambda$ (mezcla gamma–Poisson)
+
+Usamos una identidad que sale de que la densidad Gamma$(k, c)$ integra 1:
+
+$$
+\int_0^\infty \lambda^{k-1} e^{-c\lambda} \, d\lambda = \frac{\Gamma(k)}{c^k}, \qquad k > 0, \; c > 0.
+$$
+
+Para cualquier $t \ge 0$, sustituimos $f(\lambda \mid r, \alpha)$ y juntamos potencias y exponenciales:
+
+$$
+\int_0^\infty \lambda^x e^{-\lambda t} \, \frac{\alpha^r \lambda^{r-1} e^{-\alpha\lambda}}{\Gamma(r)} \, d\lambda
+= \frac{\alpha^r}{\Gamma(r)} \int_0^\infty \lambda^{(r+x)-1} e^{-(\alpha + t)\lambda} \, d\lambda
+= \frac{\alpha^r}{\Gamma(r)} \cdot \frac{\Gamma(r+x)}{(\alpha + t)^{r+x}}
+$$
+
+usando la identidad con $k = r + x$ y $c = \alpha + t$.
+
+Se aplica dos veces: con $t = T$ en la historia A y con $t = t_x$ en la historia B.
+
+*Interpretación:* lo que queda dentro de la integral es el núcleo de una
+Gamma$(r + x, \, \alpha + t)$. Es la misma cuenta de la mezcla gamma–Poisson
+(binomial negativa) de la clase de GLMs.
+
+### Integrales sobre $p$ (definición de la función beta)
+
+Usamos la definición de la función beta:
+
+$$
+B(u, v) = \int_0^1 p^{u-1}(1-p)^{v-1} \, dp, \qquad u > 0, \; v > 0.
+$$
+
+**(p1) Historia A:** sobrevivir a las $x$ compras.
+
+$$
+\int_0^1 (1-p)^x \, \frac{p^{a-1}(1-p)^{b-1}}{B(a,b)} \, dp
+= \frac{1}{B(a,b)} \int_0^1 p^{a-1}(1-p)^{(b+x)-1} \, dp
+= \frac{B(a, \, b+x)}{B(a,b)}
+$$
+
+**(p2) Historia B:** sobrevivir a $x-1$ compras y morir en la $x$-ésima.
+
+$$
+\int_0^1 p(1-p)^{x-1} \, \frac{p^{a-1}(1-p)^{b-1}}{B(a,b)} \, dp
+= \frac{1}{B(a,b)} \int_0^1 p^{(a+1)-1}(1-p)^{(b+x-1)-1} \, dp
+= \frac{B(a+1, \, b+x-1)}{B(a,b)}
+$$
+
+**Ojo con $x = 0$:** $B(a+1, b+x-1)$ requiere $b + x - 1 > 0$. Con $x \ge 1$ esto
+siempre se cumple, pero con $x = 0$ quedaría $B(a+1, b-1)$, que no existe si $b \le 1$.
+No es problema matemático porque ese término va multiplicado por $\delta_{x>0} = 0$,
+pero en el código hay que evitar evaluarlo (lo veremos en D3.T2).
+
+### Resultado
+
+Sustituimos las tres integrales y sacamos el factor común $\dfrac{\Gamma(r+x)\,\alpha^r}{\Gamma(r)}$:
+
+$$
+\boxed{L(r, \alpha, a, b \mid x, t_x, T) = \frac{\Gamma(r+x)\,\alpha^r}{\Gamma(r)} \left[ \frac{B(a, b+x)}{B(a,b)} \frac{1}{(\alpha+T)^{r+x}} + \delta_{x>0} \frac{B(a+1, b+x-1)}{B(a,b)} \frac{1}{(\alpha+t_x)^{r+x}} \right]}
+$$
+
+Cada término conserva su significado: el primero corresponde a la historia A (sigue
+vivo) y el segundo a la historia B (murió después de $t_x$).
+
+### Log-verosimilitud de la muestra
+
+Los clientes son independientes, así que la verosimilitud de la muestra es el producto
+de las verosimilitudes individuales. En la práctica maximizamos su logaritmo:
+
+$$
+\ell(r, \alpha, a, b) = \sum_{i=1}^{N} \log L(r, \alpha, a, b \mid x_i, t_{x,i}, T_i)
+$$
+
+Para programarla de forma estable, con
+$c_i = \log\Gamma(r + x_i) - \log\Gamma(r) + r \log\alpha$:
+
+$$
+\log L_i = c_i + \log\!\Big( e^{A_i} + \delta_{x_i>0}\, e^{B_i} \Big)
+$$
+
+$$
+A_i = \log B(a, b+x_i) - \log B(a,b) - (r + x_i)\log(\alpha + T_i)
+$$
+
+$$
+B_i = \log B(a+1, b+x_i-1) - \log B(a,b) - (r + x_i)\log(\alpha + t_{x,i})
+$$
+
+En Python: `gammaln` para $\log\Gamma$, `betaln` para $\log B$ y `np.logaddexp(A, B)`
+para $\log(e^A + e^B)$, poniendo $B_i = -\infty$ cuando $x_i = 0$.
+
+### Preguntas posibles
+
+- **¿Por qué se puede separar la integral doble?** Porque $\lambda$ y $p$ son
+  independientes (supuesto v) y cada término es un producto de una función de $p$ por
+  una de $\lambda$. Sin independencia habría que integrar la densidad conjunta completa.
+- **¿De dónde sale la identidad de la Gamma?** De que la densidad Gamma$(k, c)$ integra 1.
+- **¿Por qué trabajamos con el logaritmo?** Porque $\Gamma(r+x)$ crece muchísimo y
+  $(\alpha+T)^{-(r+x)}$ se vuelve diminuto; multiplicarlos directamente desborda la
+  computadora. En logaritmos son sumas de números razonables.
+- **¿Qué significan $r/\alpha$ y $a/(a+b)$?** Son las medias de las distribuciones de
+  $\lambda$ y de $p$: la tasa de compra promedio de un cliente activo y la probabilidad
+  promedio de morir después de una compra (inciso 2.2).
+
+  ### Verificación numérica
+
+El script `src/verificar_integral.py` calcula la integral doble numéricamente
+(`scipy.integrate.dblquad`) y la compara con la fórmula cerrada, usando los
+parámetros del artículo ($r = 0.243$, $\alpha = 4.414$, $a = 0.793$, $b = 2.426$).
+
+| $x$ | $t_x$ | $T$ | Fórmula cerrada | Integral numérica |
+|---|---------|-----|-----------------|-------------------|
+| 0 | 0.00 | 38.86 | 5.742369e-01 | 5.742369e-01 |
+| 1 | 1.71 | 38.86 | 1.145770e-02 | 1.145770e-02 |
+| 2 | 30.43 | 38.86 | 7.801524e-05 | 7.801524e-05 |
+| 5 | 20.00 | 30.00 | 8.254443e-08 | 8.254443e-08 |
+
+Coinciden en todos los casos, incluido $x = 0$.
