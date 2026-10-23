@@ -69,3 +69,16 @@ print("\nPrimeros clientes:")
 print(rfm[["id", "x", "tx", "T", "x_star"]].head().round(2).to_string(index=False))
 print("Compras repetidas en calibración:", rfm["x"].sum())
 print("Compras en holdout:", rfm["x_star"].sum())
+
+# 0.4 Preguntas del enunciado
+
+frac_sin_repetir = (rfm["x"] == 0).mean()
+print(f"\nFracción sin compras repetidas en calibración: {frac_sin_repetir:.4f}")
+print(f"T va de {rfm['T'].min():.2f} a {rfm['T'].max():.2f} semanas")
+
+# Guardar resultados
+
+PROCESADO.mkdir(parents=True, exist_ok=True)
+trans.to_csv(PROCESADO / "cdnow_trans.csv", index=False)
+rfm.to_csv(PROCESADO / "cdnow_rfm.csv", index=False)
+print("\nArchivos guardados en data/procesado/")
