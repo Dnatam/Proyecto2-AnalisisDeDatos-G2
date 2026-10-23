@@ -42,3 +42,30 @@ print("\nTransacciones en calibración:", len(cal))
 print("Transacciones en holdout:", len(hold))
 print(f"Semanas: calibración hasta {cal['semana'].max():.2f}, "
       f"holdout hasta {hold['semana'].max():.2f}")
+
+
+# 0.3 Estadísticos por cliente: x, tx, T (calibración) y x* (holdout)
+
+g = cal.groupby("id")["fecha"]
+rfm = pd.DataFrame({
+    "primera": g.min(),
+    "ultima": g.max(),
+    "n_cal": g.count(),
+})
+rfm["x"] = rfm["n_cal"] - 1
+rfm["tx"] = (rfm["ultima"] - rfm["primera"]).dt.days / 7
+rfm["T"] = (FIN_CAL - rfm["primera"]).dt.days / 7
+rfm["x_star"] = hold.groupby("id").size().reindex(rfm.index, fill_value=0)
+rfm["semana_primera"] = (rfm["primera"] - DIA0).dt.days / 7   # lo usaremos en 3.1
+rfm = rfm.drop(columns="n_cal").reset_index()
+
+# Chequeos de consistencia: si alguno falla, el programa se detiene con un error
+assert len(rfm) == 2357, "Deberían ser 2,357 clientes"
+assert (rfm["primera"] <= pd.Timestamp("1997-03-31")).all(), "Todos llegaron en el 1er trimestre"
+assert ((rfm["tx"] >= 0) & (rfm["tx"] <= rfm["T"])).all(), "Debe cumplirse 0 <= tx <= T"
+assert ((rfm["x"] == 0) == (rfm["tx"] == 0)).all(), "x = 0 si y solo si tx = 0"
+
+print("\nPrimeros clientes:")
+print(rfm[["id", "x", "tx", "T", "x_star"]].head().round(2).to_string(index=False))
+print("Compras repetidas en calibración:", rfm["x"].sum())
+print("Compras en holdout:", rfm["x_star"].sum())
