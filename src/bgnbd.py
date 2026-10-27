@@ -1,7 +1,6 @@
 from pathlib import Path
-
 import numpy as np
-from scipy.special import betaln, gammaln
+from scipy.special import betaln, gammaln, hyp2f1
 
 RAIZ = Path(__file__).resolve().parents[1]
 
@@ -38,6 +37,20 @@ def loglik(params, x, tx, T):
     """Log-verosimilitud total de la muestra."""
     return np.sum(loglik_individual(params, x, tx, T))
 
+def compras_esperadas(params, t):
+    """
+    E[X(t)]: número esperado de compras repetidas en las t semanas posteriores a la
+    primera compra, para un cliente que acaba de llegar (inciso 3.1):
+
+        E[X(t)] = (a + b - 1)/(a - 1) · [1 - (α/(α + t))^r · 2F1(r, b; a + b - 1; t/(α + t))]
+
+    t puede ser un número o un arreglo; para t <= 0 devuelve 0.
+    """
+    r, alpha, a, b = params
+    t = np.maximum(np.asarray(t, dtype=float), 0.0)
+    z = t / (alpha + t)
+    return ((a + b - 1) / (a - 1)
+            * (1 - (alpha / (alpha + t)) ** r * hyp2f1(r, b, a + b - 1, z)))
 
 if __name__ == "__main__":
     import pandas as pd
