@@ -23,17 +23,21 @@ def loglik_individual(params, x, tx, T):
 
     c = gammaln(r + x) - gammaln(r) + r * np.log(alpha)
     A = betaln(a, b + x) - betaln(a, b) - (r + x) * np.log(alpha + T)
-    B = betaln(a + 1, b + x - 1) - betaln(a, b) - (r + x) * np.log(alpha + tx)
 
-    # δ_{x>0} en escala logarítmica: si x = 0, el término B no existe -> log(0) = -inf
-    B = np.where(x > 0, B, -np.inf)
+    hay_repetidas = x > 0
+    x_seguro = np.where(hay_repetidas, x, 1.0)
+    B = (betaln(a + 1, b + x_seguro - 1) - betaln(a, b)
+         - (r + x_seguro) * np.log(alpha + tx))
+    B = np.where(hay_repetidas, B, -np.inf)
 
     # log(e^A + e^B) calculado de forma estable
     return c + np.logaddexp(A, B)
 
+
 def loglik(params, x, tx, T):
     """Log-verosimilitud total de la muestra."""
     return np.sum(loglik_individual(params, x, tx, T))
+
 
 if __name__ == "__main__":
     import pandas as pd
@@ -54,3 +58,24 @@ if __name__ == "__main__":
     ll = loglik(params_articulo, rfm["x"], rfm["tx"], rfm["T"])
     print(f"\nPrueba 2: log-verosimilitud de CDNOW con los parámetros del artículo = {ll:.2f}")
     print("  (el artículo reporta -9582.4 en su óptimo)")
+
+    # Prueba 3: con x = 0, la verosimilitud debe ser (α / (α + T))^r para cualquier a, b
+    print("\nPrueba 3: clientes con x = 0 y distintos valores de b")
+    r, alpha = 0.25, 4.0
+    T0 = np.array([27.0, 33.0, 38.86])
+    esperado = r * np.log(alpha / (alpha + T0))
+    for b in [2.5, 1.0, 0.5, 0.1]:
+        obtenido = loglik_individual((r, alpha, 0.8, b), np.zeros(3), np.zeros(3), T0)
+        ok = np.allclose(obtenido, esperado)
+        print(f"  b = {b:<4}: {np.round(obtenido, 6)} -> {'OK' if ok else 'ERROR'}")
+        assert ok
+
+    # Prueba 4: ningún nan ni inf en una muestra mixta, con parámetros extremos
+    rng = np.random.default_rng(0)
+    x_m, tx_m, T_m = rfm["x"].values, rfm["tx"].values, rfm["T"].values
+    n_malos = 0
+    for _ in range(2000):
+        p = np.exp(rng.uniform(-10, 10, size=4))
+        if not np.isfinite(loglik(p, x_m, tx_m, T_m)):
+            n_malos += 1
+    print(f"\nPrueba 4: 2000 combinaciones extremas de parámetros -> {n_malos} resultados no finitos")
