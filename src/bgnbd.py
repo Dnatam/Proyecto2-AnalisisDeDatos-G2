@@ -52,6 +52,32 @@ def compras_esperadas(params, t):
     return ((a + b - 1) / (a - 1)
             * (1 - (alpha / (alpha + t)) ** r * hyp2f1(r, b, a + b - 1, z)))
 
+def compras_condicionales(params, x, tx, T, tau):
+    """
+    E[Y(τ) | x, tx, T]: compras esperadas en las siguientes τ semanas para un cliente
+    con historia (x, tx, T) (inciso 3.4):
+
+        E[Y(τ)] = (a + b + x - 1)/(a - 1) · [1 - A^(r+x) · 2F1(r + x, b + x; a + b + x - 1; 1 - A)] / D
+
+        A = (α + T)/(α + T + τ)
+        D = 1 + δ_{x>0} · a/(b + x - 1) · ((α + T)/(α + tx))^(r+x)
+    """
+    r, alpha, a, b = params
+    x = np.asarray(x, dtype=float)
+    tx = np.asarray(tx, dtype=float)
+    T = np.asarray(T, dtype=float)
+
+    A = (alpha + T) / (alpha + T + tau)
+    numerador = 1 - A ** (r + x) * hyp2f1(r + x, b + x, a + b + x - 1, 1 - A)
+
+    # Igual que en la log-verosimilitud: con x = 0 el segundo término de D no existe
+    hay_repetidas = x > 0
+    x_seguro = np.where(hay_repetidas, x, 1.0)
+    termino = a / (b + x_seguro - 1) * ((alpha + T) / (alpha + tx)) ** (r + x_seguro)
+    D = 1 + np.where(hay_repetidas, termino, 0.0)
+
+    return (a + b + x - 1) / (a - 1) * numerador / D
+
 if __name__ == "__main__":
     import pandas as pd
     from verificar_integral import L_cerrada
@@ -92,3 +118,11 @@ if __name__ == "__main__":
         if not np.isfinite(loglik(p, x_m, tx_m, T_m)):
             n_malos += 1
     print(f"\nPrueba 4: 2000 combinaciones extremas de parámetros -> {n_malos} resultados no finitos")
+    
+    # Prueba 5: un cliente con T = 0 (recién llegado) no tiene historia,
+    # así que E[Y(τ) | 0, 0, 0] debe ser igual a E[X(τ)]
+    params_cdnow = (0.2426, 4.4136, 0.7929, 2.4259)
+    cond = compras_condicionales(params_cdnow, [0], [0], [0], 39)[0]
+    incond = compras_esperadas(params_cdnow, 39)
+    print(f"\nPrueba 5: E[Y(39) | 0, 0, 0] = {cond:.6f} | E[X(39)] = {incond:.6f}")
+    assert np.isclose(cond, incond)
