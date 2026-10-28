@@ -1,0 +1,7 @@
+Metodo,Total_Pronosticado,Error_Porcentual_%,MAE_Semanal
+Media_Historica,2393.0,27.15,16.09
+Naive_Semana39,2418.0,28.48,16.56
+Promedio_Movil_4w,2125.5,12.94,12.27
+Promedio_Movil_8w,2071.88,10.09,11.67
+Tendencia_Lineal_Completa,2626.08,39.54,20.89
+Tendencia_Lineal_12w,2305.64,22.51,15.11
