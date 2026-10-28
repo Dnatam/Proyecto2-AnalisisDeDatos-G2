@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import scipy.optimize as opt
 from bgnbd import loglik
+from simulador import simular_cohorte_bgnbd
 
 RAIZ = Path(__file__).resolve().parents[1]
 
