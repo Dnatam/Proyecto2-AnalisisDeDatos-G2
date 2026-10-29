@@ -30,11 +30,18 @@ def evaluar_pronostico_online_retail():
     print(f"Clientes en calibración: {len(rfm)}")
 
     # 2. Definir la duración del holdout (tau)
-    # FIN_CAL = 2011-08-31 23:59:59, FIN_HOLD = 2011-12-09 23:59:59 (aprox 14.2857 semanas)
-    dias_holdout = (pd.Timestamp("2011-12-09 23:59:59") - pd.Timestamp("2011-08-31 23:59:59")).total_seconds() / (24 * 3600)
-    tau = dias_holdout / 7.0
-    print(f"Horizonte de holdout (tau): {tau:.4f} semanas ({dias_holdout:.1f} días)")
+    # Holdout: desde el 1 de julio hasta el 8 de diciembre de 2011,
+    # incluyendo ambos dias completos.
+    INICIO_HOLD = pd.Timestamp("2011-07-01")
+    FIN_HOLD_EXCLUSIVO = pd.Timestamp("2011-12-09")
 
+    dias_holdout = (FIN_HOLD_EXCLUSIVO - INICIO_HOLD).days
+    tau = dias_holdout / 7.0
+
+    print(
+        f"Horizonte de holdout (tau): "
+        f"{tau:.4f} semanas ({dias_holdout} dias)"
+    )
     # 3. Calcular compras esperadas en holdout por cliente
     x = rfm["x"].values
     tx = rfm["tx"].values

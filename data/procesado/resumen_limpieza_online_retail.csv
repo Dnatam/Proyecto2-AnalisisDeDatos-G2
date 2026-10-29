@@ -1,7 +1,4 @@
 etapa,registros_antes,registros_eliminados,registros_despues
 Sin CustomerID,541909,135080,406829
-Facturas canceladas,406829,8905,397924
-Cantidad no positiva,397924,0,397924
-Precio no positivo,397924,40,397884
-Sin fecha o factura,397884,0,397884
-Duplicados exactos,397884,5192,392692
+Sin fecha valida,406829,0,406829
+Cantidad o precio invalido,406829,0,406829
