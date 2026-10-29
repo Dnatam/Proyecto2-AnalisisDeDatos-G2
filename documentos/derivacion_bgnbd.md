@@ -283,3 +283,119 @@ parámetros del artículo ($r = 0.243$, $\alpha = 4.414$, $a = 0.793$, $b = 2.42
 | 5 | 20.00 | 30.00 | 8.254443e-08 | 8.254443e-08 |
 
 Coinciden en todos los casos, incluido $x = 0$.
+
+## 4.3 Probabilidad de comprar en el holdout, $P(Z = 1)$
+
+Sea $Z = 1$ si el cliente hace al menos una compra en las $\tau$ semanas siguientes al
+final de la calibración, es decir, en $(T, T + \tau]$, y $Z = 0$ si no.
+
+### Primero: ¿de dónde sale $P(\text{vivo})$?
+
+Por la regla de Bayes, la probabilidad de estar vivo dados los datos es el peso de la
+historia A dentro de la verosimilitud total de 1.2:
+
+$$
+P(\text{vivo} \mid x, t_x, T) = \frac{\text{término A}}{\text{término A} + \delta_{x>0}\,\text{término B}}
+= \left[ 1 + \delta_{x>0} \frac{B(a+1, b+x-1)}{B(a, b+x)} \left(\frac{\alpha+T}{\alpha+t_x}\right)^{r+x} \right]^{-1}
+$$
+
+y como $\dfrac{B(a+1, b+x-1)}{B(a, b+x)} = \dfrac{\Gamma(a+1)\,\Gamma(b+x-1)}{\Gamma(a)\,\Gamma(b+x)} = \dfrac{a}{b+x-1}$:
+
+$$
+P(\text{vivo} \mid x, t_x, T) = \left[ 1 + \delta_{x>0} \frac{a}{b+x-1} \left(\frac{\alpha+T}{\alpha+t_x}\right)^{r+x} \right]^{-1}
+$$
+
+Con $x = 0$ solo existe la historia A, así que $P(\text{vivo}) = 1$.
+
+### Paso 1: separar por el estado del cliente en $T$
+
+Al final de la calibración el cliente está vivo o muerto:
+
+$$
+P(Z = 0) = \underbrace{P(\text{muerto})}_{1 - P(\text{vivo})} \cdot \underbrace{P(Z = 0 \mid \text{muerto})}_{= 1}
++ P(\text{vivo}) \cdot P(Z = 0 \mid \text{vivo})
+$$
+
+Un cliente muerto no compra con probabilidad 1.
+
+### Paso 2: un cliente vivo que no compra sigue vivo (pista 1)
+
+En el BG/NBD solo se muere justo después de una compra. Si el cliente no compra en
+$(T, T + \tau]$, no tiene ninguna oportunidad de morir, así que sigue comprando con
+tasa $\lambda$ durante todo el intervalo. Para un $\lambda$ conocido, cero compras en
+$\tau$ semanas de un proceso de Poisson ocurre con probabilidad
+
+$$
+P(Z = 0 \mid \text{vivo}, \lambda) = e^{-\lambda \tau}.
+$$
+
+Si compra, puede morir después, pero eso ya no importa: $Z = 1$.
+
+### Paso 3: distribución de $\lambda$ dado que está vivo (pista 2)
+
+No conocemos $\lambda$, pero la historia del cliente nos da información sobre ella.
+Por Bayes, si el cliente está vivo en $T$, su historia es la historia A de 1.1:
+
+$$
+f(\lambda \mid \text{vivo}, x, t_x, T) \;\propto\;
+\underbrace{\int_0^1 (1-p)^x f(p)\, dp}_{\text{constante en } \lambda}
+\cdot \lambda^x e^{-\lambda T} \cdot \frac{\alpha^r \lambda^{r-1} e^{-\alpha\lambda}}{\Gamma(r)}
+\;\propto\; \lambda^{(r+x)-1} e^{-(\alpha + T)\lambda}
+$$
+
+La integral sobre $p$ no depende de $\lambda$ gracias a la independencia (supuesto v),
+así que se va en la constante. Lo que queda es el núcleo de una Gamma:
+
+$$
+\lambda \mid \text{vivo}, x, t_x, T \;\sim\; \text{Gamma}(r + x,\; \alpha + T)
+$$
+
+*Interpretación:* cada compra suma 1 a la forma y cada semana observada suma 1 a la
+tasa. Un cliente que compró mucho en poco tiempo tiene una $\lambda$ posterior alta.
+
+### Paso 4: promediar sobre $\lambda$ (pista 3)
+
+Con la identidad de 1.2, $\int_0^\infty \lambda^{k-1} e^{-c\lambda}\, d\lambda = \Gamma(k)/c^k$:
+
+$$
+P(Z = 0 \mid \text{vivo}) = \int_0^\infty e^{-\lambda\tau}
+\frac{(\alpha+T)^{r+x} \lambda^{r+x-1} e^{-(\alpha+T)\lambda}}{\Gamma(r+x)}\, d\lambda
+= \frac{(\alpha+T)^{r+x}}{\Gamma(r+x)} \cdot \frac{\Gamma(r+x)}{(\alpha+T+\tau)^{r+x}}
+= \left(\frac{\alpha+T}{\alpha+T+\tau}\right)^{r+x}
+$$
+
+Es la probabilidad de cero de una binomial negativa: la mezcla gamma–Poisson.
+
+### Paso 5: juntar
+
+$$
+P(Z = 0) = 1 - P(\text{vivo}) + P(\text{vivo}) \left(\frac{\alpha+T}{\alpha+T+\tau}\right)^{r+x}
+$$
+
+y por lo tanto
+
+$$
+\boxed{P(Z = 1 \mid x, t_x, T) = P(\text{vivo} \mid x, t_x, T) \left[ 1 - \left(\frac{\alpha+T}{\alpha+T+\tau}\right)^{r+x} \right]}
+$$
+
+**Comprobaciones:** con $\tau = 0$ da $0$ (no hay tiempo para comprar); conforme
+$\tau \to \infty$ tiende a $P(\text{vivo})$ (un vivo tarde o temprano compra); y
+siempre $P(Z = 1) \le P(\text{vivo})$.
+
+### Preguntas posibles
+
+- **¿Por qué $P(\text{vivo})$ no sirve como probabilidad de comprar?** Porque estar vivo
+  es necesario pero no suficiente: un cliente vivo con $\lambda$ pequeña puede pasar 39
+  semanas sin comprar. El factor entre corchetes es justamente la probabilidad de que un
+  vivo compre al menos una vez.
+- **¿Por qué es importante que un vivo que no compra siga vivo?** Porque garantiza que
+  la tasa $\lambda$ no cambia durante el holdout mientras no compre, y eso permite usar
+  directamente $e^{-\lambda\tau}$. En un modelo donde se puede morir en cualquier
+  momento, como el Pareto/NBD, esta cuenta cambiaría.
+- **¿Por qué la posterior de $\lambda$ no depende de $t_x$?** Porque, dado que está vivo,
+  la historia es la A, cuya parte en $\lambda$ es $\lambda^x e^{-\lambda T}$: solo
+  importan $x$ y $T$. La información de $t_x$ ya entró a través de $P(\text{vivo})$.
+- **¿Por qué la fórmula sigue valiendo para el MBG/NBD (4.6)?** Porque los pasos 1 a 4
+  solo usan que un vivo que no compra sigue vivo y que, dado vivo, la parte en $\lambda$
+  es $\lambda^x e^{-\lambda T}$. Ambos se cumplen también en el MBG/NBD; solo cambia
+  $P(\text{vivo})$.
