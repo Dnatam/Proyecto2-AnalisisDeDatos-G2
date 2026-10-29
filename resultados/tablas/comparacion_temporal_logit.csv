@@ -1,0 +1,4 @@
+Ventana_Calibracion,Clientes,Tasa_Base_Holdout_%,AUC-ROC,Accuracy,Log-Loss,Brier_Score
+13 semanas,2357,35.64,0.6735,0.6937,0.6024,0.2065
+26 semanas,2357,31.61,0.7406,0.7527,0.5349,0.1764
+39 semanas,2357,28.94,0.7786,0.7794,0.4843,0.1558
