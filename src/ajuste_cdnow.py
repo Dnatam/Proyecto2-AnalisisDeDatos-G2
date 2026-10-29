@@ -21,16 +21,19 @@ INICIOS = [
 COTA = 10.0 
 
 
-def menos_loglik(log_params, x, tx, T):
+def menos_loglik(log_params, x, tx, T, funcion_loglik=loglik):
     """-log L en función de log(r, α, a, b): así los parámetros siempre son positivos."""
-    return -loglik(np.exp(log_params), x, tx, T)
+    return -funcion_loglik(np.exp(log_params), x, tx, T)
 
 
-def ajustar(x, tx, T, inicios=INICIOS):
-    """Máxima verosimilitud desde varios puntos iniciales con L-BFGS-B."""
+def ajustar(x, tx, T, inicios=INICIOS, funcion_loglik=loglik):
+    """
+    Máxima verosimilitud desde varios puntos iniciales con L-BFGS-B.
+    funcion_loglik permite ajustar otro modelo de la familia (por defecto, el BG/NBD).
+    """
     arranques = []
     for inicio in inicios:
-        res = minimize(menos_loglik, np.log(inicio), args=(x, tx, T),
+        res = minimize(menos_loglik, np.log(inicio), args=(x, tx, T, funcion_loglik),
                        method="L-BFGS-B", bounds=[(-COTA, COTA)] * 4)
         fila = dict(zip(NOMBRES, np.exp(res.x)))
         fila["loglik"] = -res.fun

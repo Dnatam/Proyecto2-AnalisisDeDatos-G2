@@ -399,3 +399,32 @@ siempre $P(Z = 1) \le P(\text{vivo})$.
   solo usan que un vivo que no compra sigue vivo y que, dado vivo, la parte en $\lambda$
   es $\lambda^x e^{-\lambda T}$. Ambos se cumplen también en el MBG/NBD; solo cambia
   $P(\text{vivo})$.
+
+## 4.6 El MBG/NBD: qué cambia en la derivación
+
+El MBG/NBD cambia una sola pieza del BG/NBD: el cliente también puede morir **justo
+después de su primera compra**. Las dos historias de 1.1 quedan así:
+
+- **Historia A (vivo en $T$):** sobrevive a la primera compra y a las $x$ repetidas:
+  $(1-p)^{x+1} \lambda^x e^{-\lambda T}$.
+- **Historia B (murió tras la compra en $t_x$):** sobrevive a $x$ compras y muere en la
+  siguiente: $p(1-p)^x \lambda^x e^{-\lambda t_x}$. Si $x = 0$, es un cliente que compró
+  una vez ($t_x = 0$) y murió de inmediato, así que **esta historia existe para todo $x$**
+  y desaparece $\delta_{x>0}$.
+
+La integral sobre $\lambda$ es idéntica a la de 1.2. Las de $p$ dan
+$\int (1-p)^{x+1} f(p)\,dp = B(a, b+x+1)/B(a,b)$ y
+$\int p(1-p)^x f(p)\,dp = B(a+1, b+x)/B(a,b)$, de donde sale la verosimilitud del
+enunciado. Como $B(a+1, b+x)/B(a, b+x+1) = a/(b+x)$, por el mismo argumento de 4.3:
+
+$$
+P(\text{vivo} \mid x, t_x, T) = \left[ 1 + \frac{a}{b+x} \left(\frac{\alpha+T}{\alpha+t_x}\right)^{r+x} \right]^{-1}
+$$
+
+que ya no vale 1 cuando $x = 0$. La fórmula de $P(Z = 1)$ de 4.3 sigue valiendo, porque
+un cliente vivo que no compra sigue vivo y, dado que está vivo, la parte en $\lambda$ de
+su historia sigue siendo $\lambda^x e^{-\lambda T}$, así que su posterior es la misma
+Gamma$(r + x, \alpha + T)$. Solo cambia $P(\text{vivo})$.
+
+La implementación está en `src/mbgnbd.py`, y la prueba 1 de ese archivo verifica
+numéricamente la verosimilitud cerrada contra la integral doble de estas dos historias.
