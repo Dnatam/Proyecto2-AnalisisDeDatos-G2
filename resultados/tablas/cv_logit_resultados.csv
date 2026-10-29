@@ -1,0 +1,5 @@
+Métrica,Media,Desv_Est
+AUC-ROC,0.779,0.0211
+Accuracy,0.7798,0.0141
+Log-Loss,0.4858,0.018
+Brier Score,0.1561,0.0073
