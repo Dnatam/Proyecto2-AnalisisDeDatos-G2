@@ -1,0 +1,2 @@
+modelo,horizonte_semanas,clientes_evaluacion,tasa_real,auc,brier,logloss
+Logistica temporal,13.0,2357,0.17055579126007636,0.7927606214452035,0.11180803457824467,0.3753509396336368
