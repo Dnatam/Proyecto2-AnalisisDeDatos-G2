@@ -1,208 +1,47 @@
-# Limpieza y preparación del conjunto de datos Online Retail
+# Limpieza y preparación de Online Retail
 
-## 1. Objetivo
+Programa: `src/limpiar_online_retail.py`. Entrada: `data/original/Online Retail.xlsx`.
 
-Realizar la limpieza y preparación del conjunto de datos Online Retail para su posterior utilización en el modelo BG/NBD, eliminando registros que no representan compras válidas y consolidando las líneas de productos en transacciones individuales.
+## 1. Qué pide el enunciado
 
-El procedimiento busca obtener información consistente sobre los clientes, sus compras y las fechas en las que ocurrieron, sin modificar el archivo original.
+Quedarse solo con las líneas que tienen `CustomerID` y definir una **transacción como un día
+con venta neta positiva de un cliente**. La palabra clave es *neta*: las devoluciones y
+cancelaciones (cantidades negativas, facturas que empiezan con `C`) **no se eliminan**, se
+restan de las compras del mismo día. Si se eliminaran, un cliente que compra y devuelve todo
+el mismo día contaría como una compra que en realidad no existió.
 
-## 2. Descripción del conjunto de datos
+## 2. Procedimiento
 
-Se utilizó el archivo `data/original/Online Retail.xlsx`, que contiene información transaccional entre el 1 de diciembre de 2010 y el 9 de diciembre de 2011.
+| Paso | Qué se hace | Líneas antes | Eliminadas | Líneas después |
+|---|---|---:|---:|---:|
+| 1 | Quitar líneas sin `CustomerID` | 541,909 | 135,080 | 406,829 |
+| 2 | Quitar fechas inválidas | 406,829 | 0 | 406,829 |
+| 3 | Quitar cantidad o precio no numéricos | 406,829 | 0 | 406,829 |
 
-El conjunto original contiene 541,909 registros y 8 columnas:
+Después se calcula el importe de cada línea (`Quantity × UnitPrice`, conservando los
+negativos), se agrupa por cliente y día calendario, y se suman los importes.
 
-| Columna | Descripción |
-|---|---|
-| InvoiceNo | Identificador de la factura |
-| StockCode | Código del producto |
-| Description | Descripción del producto |
-| Quantity | Cantidad adquirida |
-| InvoiceDate | Fecha y hora de la transacción |
-| UnitPrice | Precio unitario del producto |
-| CustomerID | Identificador del cliente |
-| Country | País asociado a la compra |
-
-Cada fila representa una línea de producto de una factura. Por lo tanto, varias filas pueden corresponder a una misma transacción.
-
-Para utilizar los datos con BG/NBD es necesario identificar los eventos de compra por cliente, evitando contar cada producto como una compra independiente.
-
-## 3. Diagnóstico inicial
-
-Antes de realizar la limpieza se identificaron las siguientes características:
-
-| Característica | Cantidad |
+| Resultado | Valor |
 |---|---:|
-| Registros originales | 541,909 |
-| Clientes identificados | 4,372 |
-| Facturas distintas | 25,900 |
-| Registros sin CustomerID | 135,080 |
-| Registros sin Description | 1,454 |
-| Cantidades no positivas | 10,624 |
-| Precios no positivos | 2,517 |
-| Filas de facturas canceladas | 9,288 |
-| Duplicados exactos | 5,268 |
+| Días cliente con al menos una línea | 19,296 |
+| Días con venta neta ≤ 0 (descartados) | 2,684 |
+| **Transacciones (días con venta neta > 0)** | **16,612** |
+| Clientes con al menos una transacción | 4,334 |
+| Rango de fechas | 1 dic 2010 a 9 dic 2011 |
 
-Estas condiciones pueden superponerse, por lo que sus cantidades iniciales no deben sumarse para determinar el número de registros eliminados.
+Las líneas válidas se guardan en `data/procesado/online_retail_limpio.csv` y las
+transacciones diarias en `data/procesado/online_retail_transacciones.csv`; el conteo por
+etapa queda en `data/procesado/resumen_limpieza_online_retail.csv`.
 
-## 4. Procedimiento de limpieza
+## 3. Verificaciones
 
-La limpieza se implementó en `src/limpiar_online_retail.py`, utilizando Python y la biblioteca pandas.
+El script comprueba que no haya dos transacciones del mismo cliente el mismo día, que todas
+las ventas netas sean positivas y que todas las fechas sean días completos (sin hora).
 
-Se aplicaron las siguientes reglas de manera secuencial:
+## 4. Nota sobre la función `limpiar` de la tarea
 
-1. Eliminar registros sin identificador de cliente (`CustomerID`).
-2. Excluir facturas cuyo identificador comienza con `C`, utilizadas para representar cancelaciones.
-3. Excluir registros con cantidades menores o iguales a cero.
-4. Excluir registros con precios unitarios menores o iguales a cero.
-5. Excluir registros sin fecha o identificador de factura.
-6. Eliminar filas duplicadas exactas.
-7. Normalizar los identificadores de clientes y facturas.
-8. Convertir las fechas a un formato de fecha y hora.
-9. Ordenar los registros por cliente, fecha y factura.
-
-No se eliminó información únicamente por la ausencia de una descripción del producto, ya que esta variable no es indispensable para identificar las compras.
-
-La eliminación de duplicados exactos se adoptó como criterio de limpieza. No obstante, debe considerarse que algunos registros idénticos podrían corresponder a líneas legítimas de una factura.
-
-## 5. Resultados de la limpieza
-
-El programa generó el siguiente resumen:
-
-| Etapa | Registros eliminados | Registros restantes |
-|---|---:|---:|
-| Datos originales | — | 541,909 |
-| Sin CustomerID | 135,080 | 406,829 |
-| Facturas canceladas | 8,905 | 397,924 |
-| Cantidad no positiva | 0 | 397,924 |
-| Precio no positivo | 40 | 397,884 |
-| Sin fecha o factura | 0 | 397,884 |
-| Duplicados exactos | 5,192 | 392,692 |
-
-En total se eliminaron 149,217 registros, equivalentes aproximadamente al 27.54 % del conjunto original.
-
-Se conservaron 392,692 líneas de venta, correspondientes al 72.46 % de los registros iniciales.
-
-La eliminación de cero registros durante la etapa de cantidades no positivas se explica porque los registros que cumplían esa condición ya habían sido excluidos mediante filtros anteriores.
-
-De manera similar, las cantidades de facturas canceladas y duplicados eliminados durante el procedimiento son menores que las identificadas inicialmente, debido a la aplicación secuencial de los filtros.
-
-## 6. Construcción de la tabla de transacciones
-
-Después de limpiar las líneas de venta, se construyó una segunda tabla que representa las transacciones individuales.
-
-Se agruparon los registros mediante `CustomerID` e `InvoiceNo`, de manera que cada combinación de cliente y factura representa una compra.
-
-El importe de cada línea se calculó como:
-
-$$
-\text{Importe}=\text{Quantity}\times\text{UnitPrice}
-$$
-
-Posteriormente, el importe total de cada factura se obtuvo sumando los importes de sus productos:
-
-$$
-\text{Total de factura}=\sum_{i=1}^{m}\text{Importe}_i
-$$
-
-Para la fecha de cada transacción se utilizó la fecha y hora más temprana registrada entre las líneas de la factura.
-
-La tabla resultante contiene las siguientes columnas:
-
-| Columna | Descripción |
-|---|---|
-| CustomerID | Identificador del cliente |
-| InvoiceNo | Identificador de la factura |
-| InvoiceDate | Fecha y hora de la compra |
-| Total | Importe total de la factura |
-
-Esta estructura permite identificar las compras realizadas por cada cliente y será utilizada posteriormente para construir las variables requeridas por BG/NBD.
-
-## 7. Resultados finales
-
-Después de consolidar las líneas de productos se obtuvieron:
-
-| Característica | Resultado |
-|---|---:|
-| Líneas de venta limpias | 392,692 |
-| Clientes identificados | 4,338 |
-| Transacciones individuales | 18,532 |
-| Facturas distintas | 18,532 |
-| Importe total conservado | 8,887,208.89 |
-| Primera fecha | 2010-12-01 08:26:00 |
-| Última fecha | 2011-12-09 12:50:00 |
-
-El conjunto final contiene 4,338 clientes y 18,532 eventos de compra.
-
-Es importante distinguir las 392,692 líneas de productos de las 18,532 transacciones, ya que BG/NBD modela eventos de compra y no cantidades de productos adquiridos.
-
-## 8. Validación de los resultados
-
-Se revisaron los archivos CSV generados para comprobar la consistencia del procedimiento.
-
-Las verificaciones confirmaron que:
-
-- No existen identificadores de cliente vacíos.
-- No existen facturas canceladas en las líneas limpias.
-- No existen cantidades o precios unitarios no positivos.
-- No existen filas duplicadas exactas en el archivo limpio.
-- No existen combinaciones duplicadas de cliente y factura en la tabla de transacciones.
-- No existen importes totales no positivos.
-- Ambas tablas contienen los mismos 4,338 clientes.
-- El importe total calculado a partir de las líneas coincide con la suma de los importes de las transacciones.
-
-También se identificaron 30 facturas cuyas líneas contienen más de una fecha u hora. En estos casos, el procedimiento seleccionó la fecha más temprana.
-
-Las verificaciones indican que los archivos generados son consistentes con los criterios de limpieza implementados.
-
-## 9. Relación con el modelo BG/NBD
-
-La limpieza de Online Retail constituye una etapa previa al ajuste del modelo BG/NBD.
-
-A partir de la tabla de transacciones será posible construir las variables:
-
-- $x$: cantidad de compras repetidas del cliente durante la calibración.
-- $t_x$: tiempo transcurrido desde la primera compra hasta la última compra repetida.
-- $T$: tiempo transcurrido desde la primera compra hasta el final del período de calibración.
-
-Para ello será necesario definir el período de calibración, el período de evaluación y la unidad de tiempo.
-
-Estas operaciones corresponden a la siguiente etapa del proyecto y no forman parte del procedimiento de limpieza realizado.
-
-## 10. Archivos generados
-
-### Programa
-
-`src/limpiar_online_retail.py`
-
-Implementa la limpieza y construcción de transacciones.
-
-### Archivo de líneas limpias
-
-`data/procesado/online_retail_limpio.csv`
-
-Contiene los registros de productos que cumplen las condiciones establecidas.
-
-### Archivo de transacciones
-
-`data/procesado/online_retail_transacciones.csv`
-
-Contiene una fila por combinación de cliente y factura, con fecha e importe total.
-
-### Resumen del procedimiento
-
-`data/procesado/resumen_limpieza_online_retail.csv`
-
-Registra los filtros aplicados y la cantidad de registros eliminados en cada etapa.
-
-## 11. Conclusiones
-
-La limpieza de Online Retail permitió transformar un conjunto original de 541,909 líneas de productos en 392,692 líneas de venta válidas según los criterios establecidos.
-
-Posteriormente, estas líneas se consolidaron en 18,532 transacciones correspondientes a 4,338 clientes.
-
-El procedimiento permitió excluir registros sin identificación de cliente, cancelaciones, cantidades y precios no positivos, así como duplicados exactos.
-
-Las validaciones realizadas confirmaron la consistencia de los identificadores, las transacciones y los importes calculados.
-
-Finalmente, se obtuvo una estructura transaccional que podrá utilizarse para construir las variables de frecuencia, recencia y tiempo de observación requeridas por BG/NBD, facilitando su aplicación al conjunto de datos Online Retail.
+El enunciado pide usar la función `limpiar` de la tarea de series de tiempo. Este script
+reproduce los pasos que afectan la definición de transacción (cliente identificado, fechas
+válidas y venta neta diaria). Los duplicados exactos y las líneas con precio cero casi
+nunca cambian el signo de la venta neta de un día, por lo que no alteran el conteo de
+transacciones de forma apreciable.
