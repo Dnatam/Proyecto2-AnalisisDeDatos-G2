@@ -136,6 +136,9 @@ def ejecutar_simulacion():
     # Guardar resultados numéricos en resultados/tablas/
     out_dir = RAIZ / "resultados" / "tablas"
     out_dir.mkdir(parents=True, exist_ok=True)
+    df_semillas = pd.DataFrame(resultados, columns=["r", "alpha", "a", "b"])
+    df_semillas.insert(0, "semilla", range(N_SEMILLAS))
+    df_semillas.to_csv(out_dir / "sim_estimaciones.csv", index=False)
     df_res = pd.DataFrame(res_summary)
     archivo_salida = out_dir / "simulacion_30_semillas.csv"
     df_res.to_csv(archivo_salida, index=False)
