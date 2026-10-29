@@ -63,3 +63,47 @@ $E[X(t)]$) contra 1,882 reales, un error de −16.5 %, mayor que el −11.6 % de
 
 La comparación de AUC de $P(\text{vivo})$ y de $P(Z = 1)$, y la discusión de con cuál
 modelo quedarse, están en la siguiente sección (D8.T2).
+
+### Comparación entre BG/NBD y MBG/NBD
+
+![ROC de ambos modelos](../resultados/graficas/roc_bg_mbg.png)
+
+| | BG/NBD | MBG/NBD |
+|---|---|---|
+| Log-verosimilitud | −9582.43 | −9582.14 |
+| $P(\text{vivo})$ promedio con $x = 0$ | 1.000 | 0.409 |
+| AUC de $P(\text{vivo})$ | 0.316 | 0.687 |
+| AUC de $P(Z = 1)$ | 0.757 | 0.760 |
+| Brier de $P(Z = 1)$ (tasa base: 0.206) | 0.161 | 0.161 |
+| Total del holdout (real: 1,882) | 1,664.1 (−11.6 %) | 1,571.7 (−16.5 %) |
+
+(`src/comparar_modelos.py`)
+
+**¿Por qué la fórmula de $P(Z = 1)$ de 4.3 sigue valiendo?** Porque su demostración solo
+usa dos hechos que el MBG/NBD conserva: un cliente vivo que no compra sigue vivo (solo se
+muere justo después de una compra), y dado que está vivo, la parte de su historia que
+depende de $\lambda$ es $\lambda^x e^{-\lambda T}$, así que su posterior sigue siendo
+Gamma$(r + x, \alpha + T)$. Lo único que cambia es $P(\text{vivo})$.
+
+**Lo que cambia y lo que no.** La diferencia grande está en $P(\text{vivo})$. En el
+BG/NBD, los 1,411 clientes con $x = 0$ reciben $P(\text{vivo}) = 1$, el valor más alto
+posible, pero son justo los que menos compran en el holdout (13.7 %). Por eso, usado
+como clasificador, el $P(\text{vivo})$ del BG/NBD ordena al revés y tiene un AUC de
+0.316, peor que el azar. El MBG/NBD les permite estar muertos y su $P(\text{vivo})$
+ordena razonablemente (AUC 0.687). Sin embargo, una vez que se usa la probabilidad
+correcta, $P(Z = 1)$, los dos modelos quedan prácticamente empatados: mismo AUC, mismo
+Brier, una correlación de Spearman de 0.98 entre sus probabilidades, y 464 de los 471
+clientes con mayor $P(Z = 1)$ coinciden en ambos (98.5 %). En el total del holdout, el
+BG/NBD se acerca más al valor real.
+
+**¿Con cuál nos quedamos para decidir a qué clientes mandar una promoción?** Lo primero
+es que la decisión debe basarse en $P(Z = 1)$, no en $P(\text{vivo})$: estar vivo no es
+lo mismo que comprar, y con el BG/NBD usar $P(\text{vivo})$ mandaría la promoción
+justamente a los clientes que menos compran. Con $P(Z = 1)$, la elección entre modelos
+casi no cambia la lista de clientes. Aun así, nos quedaríamos con el **MBG/NBD** para
+esta decisión: su supuesto de que un cliente puede irse después de su primera compra es
+más realista, su $P(\text{vivo})$ es interpretable (disminuye conforme pasa el tiempo
+sin que el cliente vuelva, en lugar de valer 1 para todos los que no repitieron) y tiene
+un AUC ligeramente mayor. Si la pregunta fuera pronosticar el total de compras de la
+base, preferiríamos el BG/NBD, que tuvo menor error en el holdout. Igual que en la
+introducción del proyecto, el modelo es una elección y depende de la pregunta.
