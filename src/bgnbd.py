@@ -78,6 +78,36 @@ def compras_condicionales(params, x, tx, T, tau):
 
     return (a + b + x - 1) / (a - 1) * numerador / D
 
+def prob_vivo(params, x, tx, T):
+    """
+    P(vivo | x, tx, T): probabilidad de que el cliente siga activo al final de la
+    calibración (inciso 4.1):
+
+        P(vivo) = [1 + δ_{x>0} · a/(b + x - 1) · ((α + T)/(α + tx))^(r+x)]^(-1)
+    """
+    r, alpha, a, b = params
+    x = np.asarray(x, dtype=float)
+    tx = np.asarray(tx, dtype=float)
+    T = np.asarray(T, dtype=float)
+
+    hay_repetidas = x > 0
+    x_seguro = np.where(hay_repetidas, x, 1.0)
+    termino = a / (b + x_seguro - 1) * ((alpha + T) / (alpha + tx)) ** (r + x_seguro)
+    return 1 / (1 + np.where(hay_repetidas, termino, 0.0))
+
+def prob_comprar(params, x, tx, T, tau):
+    """
+    P(Z = 1 | x, tx, T): probabilidad de hacer al menos una compra en las siguientes
+    τ semanas (inciso 4.3):
+
+        P(Z = 1) = P(vivo) · [1 - ((α + T)/(α + T + τ))^(r+x)]
+    """
+    r, alpha, a, b = params
+    x = np.asarray(x, dtype=float)
+    T = np.asarray(T, dtype=float)
+    A = (alpha + T) / (alpha + T + tau)
+    return prob_vivo(params, x, tx, T) * (1 - A ** (r + x))
+
 if __name__ == "__main__":
     import pandas as pd
     from verificar_integral import L_cerrada
@@ -126,3 +156,15 @@ if __name__ == "__main__":
     incond = compras_esperadas(params_cdnow, 39)
     print(f"\nPrueba 5: E[Y(39) | 0, 0, 0] = {cond:.6f} | E[X(39)] = {incond:.6f}")
     assert np.isclose(cond, incond)
+
+    # Prueba 6: P(Z = 1) vale 0 con τ = 0, crece con τ y nunca supera P(vivo)
+    x6, tx6, T6 = rfm["x"].values, rfm["tx"].values, rfm["T"].values
+    pv = prob_vivo(params_cdnow, x6, tx6, T6)
+    p0 = prob_comprar(params_cdnow, x6, tx6, T6, 0)
+    p13 = prob_comprar(params_cdnow, x6, tx6, T6, 13)
+    p39 = prob_comprar(params_cdnow, x6, tx6, T6, 39)
+    p_inf = prob_comprar(params_cdnow, x6, tx6, T6, 1e30)
+    assert np.allclose(p0, 0)
+    assert np.all((p13 <= p39) & (p39 <= pv))
+    assert np.allclose(p_inf, pv, atol=1e-4)
+    print("\nPrueba 6: P(Z = 1) = 0 con τ = 0, crece con τ y tiende a P(vivo) -> OK")
