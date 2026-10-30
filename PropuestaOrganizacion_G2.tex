@@ -1,0 +1,59 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs,enumitem,parskip,xcolor}
+\usepackage[hidelinks]{hyperref}
+\setlist[itemize]{leftmargin=1.2em,itemsep=2pt,topsep=2pt}
+\pagestyle{plain}
+\begin{document}
+\begin{center}
+{\LARGE\bfseries Propuesta de proyecto 2 (actualizada)}\\[4pt]
+{\large Contando clientes con modelos Buy 'Til You Die}\\[4pt]
+Análisis y Ciencia de Datos\\[2pt]
+Sofía Blanco -- Katherine Diéguez -- Daniela Natareno\\[2pt]
+{\small Versión final: 29 de octubre de 2026}
+\end{center}
+
+\section*{Objetivo y organización del equipo}
+El proyecto implementa y evalúa modelos probabilísticos de comportamiento de compra, principalmente BG/NBD y MBG/NBD, con datos de CDNOW y Online Retail. Incluye derivaciones matemáticas, estimación de parámetros, simulaciones, pronósticos y evaluaciones de desempeño, además de los apartados opcionales de bootstrap (2.3) y regresión logística (Parte 6). Todo quedó implementado en el repositorio \texttt{github.com/Dnatam/Proyecto2-AnalisisDeDatos-G2}.
+
+La distribución final de responsabilidades fue la siguiente:
+
+\textbf{Katherine Diéguez:} preparación de CDNOW (0.1–0.4); derivación matemática de la verosimilitud (1.1–1.2) y su verificación numérica; implementación del BG/NBD (\texttt{bgnbd.py}) y ajuste de parámetros con comparación contra el artículo (2.1); pronóstico bottom-up (3.1) y por cliente (3.4); probabilidad de compra $P(Z=1)$ (4.3); implementación, ajuste y comparación del MBG/NBD (4.6); cambio de horizonte de la logística (6.4); diagnóstico NBD de Online Retail (5.1); y redacción de las respuestas por parte.
+
+\textbf{Sofía Blanco:} diseño y ejecución de la simulación con 30 semillas y recuperación de parámetros (1.3); bootstrap sobre clientes (2.3); pronósticos agregados top-down y tabla comparativa (3.2–3.3); validación por simulación de $P(Z=1)$ (4.4); comparación del holdout de Online Retail (5.2); y evaluación con regresión logística: validación cruzada (6.1) y comparación temporal (6.3).
+
+\textbf{Daniela Natareno:} organización del repositorio y documentación; pruebas del estimador y validación del optimizador; interpretación y visualización de parámetros (2.2); interpretación de pronósticos; evaluación de $P(\text{vivo})$ y $P(Z=1)$ como clasificadores (4.1, 4.2 y 4.5); limpieza, preparación y ajuste de Online Retail, con el análisis mensual (5.1–5.2); y documentación de la fuga de información y de la conclusión de la Parte 6 (6.2, 6.5).
+
+Las tres integrantes participaron en la revisión de resultados, la elaboración de conclusiones y la presentación final, que se reparte en tres bloques: Partes 0–1, Partes 2–4.3 y Partes 4.4–6.
+
+\section*{Plan de simulación (inciso 1.3)}
+Se simularon 2,357 clientes con los parámetros poblacionales $r=0.25$, $\alpha=4$, $a=0.8$ y $b=2.5$. Para cada cliente se generó una tasa de compra a partir de una distribución Gamma y una probabilidad de abandono a partir de una distribución Beta; después se simularon las compras (tiempos exponenciales) y el abandono (después de cada compra repetida) bajo los supuestos del BG/NBD, con periodos de observación $T$ entre 27 y 39 semanas.
+
+El experimento se repitió con 30 semillas. En cada repetición se estimaron los cuatro parámetros por máxima verosimilitud con nuestra implementación en Python (\texttt{gammaln}, \texttt{betaln}, \texttt{logaddexp}) y optimización con \texttt{scipy.optimize.minimize} (L-BFGS-B sobre los logaritmos de los parámetros, varios puntos iniciales).
+
+El criterio de éxito era recuperar parámetros cercanos a los verdaderos, con convergencia consistente y sin errores sistemáticos. \textbf{Resultado:} el criterio se cumplió.
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+& $r$ & $\alpha$ & $a$ & $b$ \\
+\midrule
+Valor verdadero & 0.25 & 4.00 & 0.80 & 2.50 \\
+Media de 30 estimados & 0.253 & 4.081 & 0.798 & 2.573 \\
+Desviación estándar & 0.012 & 0.300 & 0.164 & 0.649 \\
+Sesgo relativo & $+1.3\,\%$ & $+2.0\,\%$ & $-0.3\,\%$ & $+2.9\,\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Los parámetros de la compra ($r$, $\alpha$) se estiman con más precisión que los de la muerte ($a$, $b$), porque la muerte nunca se observa directamente. Con el código validado, el ajuste a CDNOW reprodujo el artículo original: $r=0.243$, $\alpha=4.414$, $a=0.793$, $b=2.426$ y log-verosimilitud $-9582.4$.
+
+\section*{Entregables}
+\begin{itemize}
+\item \textbf{Repositorio de GitHub:} código reproducible a partir de los archivos originales (un script por inciso en \texttt{src/}), datos preparados, tablas y gráficas en \texttt{resultados/}, y \texttt{README.md} con el orden de ejecución y la ubicación de cada inciso.
+\item \textbf{Documentación:} derivaciones de 1.1, 1.2 y 4.3, simulaciones, estimaciones, comparaciones y respuestas por parte en \texttt{documentos/}.
+\item \textbf{Presentación:} diapositivas en PDF en \texttt{presentacion/}, de 20 a 25 minutos, con la participación de las tres integrantes.
+\end{itemize}
+\end{document}
